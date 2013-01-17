@@ -4,6 +4,9 @@ require 'net/ssh'
 require 'open3'
 require 'rubygems'
 require 'thor'
+require 'term/ansicolor'
+
+C = Term::ANSIColor
 
 class Host
   attr_reader :name, :ip
@@ -24,10 +27,10 @@ class Host
     @name
   end
 
-  def command(command, padding=0)
+  def command(command, padding=0, color)
     Net::SSH.start(ip, 'ubuntu') do |ssh|
       padding = padding - name.size
-      print ssh.exec!(command).lines.map{|out| "#{name}#{" "*padding}: #{out}"}.join("")
+      print ssh.exec!(command).lines.map{|out| "#{C.send(color)}#{name}#{" "*padding}: #{out}#{C.reset}"}.join("")
     end
   end
 end
@@ -52,8 +55,9 @@ class Hosts < Array
   def command(command)
     threads = []
     padding = map(&:name).map(&:size).max
-    each do |host|
-      threads << Thread.new { host.command(command, padding) }
+    each_with_index do |host, index|
+      color = C.attributes[13+index]
+      threads << Thread.new { host.command(command, padding, color) }
     end
     threads.each { |t| t.join }
     self
