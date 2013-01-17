@@ -7,7 +7,7 @@ its a tool to show servers and execute commands on them.
 ```
 git clone https://github.com/i0rek/ec2-cmd.git
 cd ec2-cmd
-ln - ln -fs `pwd`/ec2-cmd /usr/local/bin/ec2-cmd
+ln -s `pwd`/ec2-cmd /usr/local/bin/ec2-cmd
 ```
 
 ## Usage
