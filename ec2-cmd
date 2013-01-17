@@ -1,0 +1,83 @@
+#!/usr/bin/env ruby
+
+require 'net/ssh'
+require 'open3'
+require 'rubygems'
+require 'thor'
+
+class Host
+  attr_reader :name, :ip
+
+  def self.all
+    @hosts ||= `ec2-host`.lines.map{ |l| Host.new(l) }
+  end
+
+  def initialize(line)
+    @name, @ip = line.split("\t").map(&:strip)
+  end
+
+  def match(str)
+    @name.downcase.match(str)
+  end
+
+  def inspect
+    @name
+  end
+
+  def command(command, padding=0)
+    Net::SSH.start(ip, 'ubuntu') do |ssh|
+      padding = padding - name.size
+      print ssh.exec!(command).lines.map{|out| "#{name}#{" "*padding}: #{out}"}.join("")
+    end
+  end
+end
+
+class Hosts < Array
+  def self.all
+    @@result ||= `ec2-host`.lines.map{ |l| ::Host.new(l) }
+    hosts = new()
+    @@result.map{ |r| hosts << r }
+    hosts
+  end
+
+  def self.clear_all
+    @@result = nil
+  end
+
+  def filter(str)
+    self.select!{ |h| h.match(str) }
+    self
+  end
+
+  def command(command)
+    threads = []
+    padding = map(&:name).map(&:size).max
+    each do |host|
+      threads << Thread.new { host.command(command, padding) }
+    end
+    threads.each { |t| t.join }
+    self
+  end
+
+  def show
+    map{ |h| print "#{h.inspect}\n" };nil
+  end
+
+  def inspect
+    show
+  end
+end
+
+class ThorExample < Thor
+  desc "list [SEARCH]", "list all of the available servers, limited by SEARCH"
+  def do(search="", cmd=nil)
+    filtered = Hosts.all.filter(search)
+    if cmd
+      filtered.command(cmd) if cmd
+    else
+      filtered.inspect unless cmd
+    end
+  end
+end
+
+ThorExample.start
