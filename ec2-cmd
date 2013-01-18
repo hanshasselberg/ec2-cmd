@@ -56,7 +56,7 @@ class Hosts < Array
     threads = []
     padding = map(&:name).map(&:size).max
     each_with_index do |host, index|
-      color = C.attributes[13+index]
+      color = C.attributes[13+(index%8)]
       threads << Thread.new { host.command(command, padding, color) }
     end
     threads.each { |t| t.join }
